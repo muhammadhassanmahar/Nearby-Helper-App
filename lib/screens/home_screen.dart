@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import 'package:nearby_helper_app/services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,87 +9,111 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController latController = TextEditingController();
-  final TextEditingController lngController = TextEditingController();
-
-  List<dynamic> locations = [];
+  bool isLoading = true;
+  List<dynamic> requests = [];
 
   @override
   void initState() {
     super.initState();
-    fetchLocations();
+    fetchRequests();
   }
 
-  Future<void> fetchLocations() async {
+  Future<void> fetchRequests() async {
     try {
-      final data = await ApiService.getLocations();
+      final data = await ApiService.getRequests();
       setState(() {
-        locations = data;
+        requests = data;
+        isLoading = false;
       });
     } catch (e) {
-      debugPrint("Error fetching: $e");
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: ${e.toString()}")),
+      );
     }
   }
 
-  Future<void> addLocation() async {
-    final name = nameController.text.trim();
-    final lat = double.tryParse(latController.text);
-    final lng = double.tryParse(lngController.text);
-
-    if (name.isEmpty || lat == null || lng == null) return;
-
-    await ApiService.saveLocation(name, lat, lng);
-    nameController.clear();
-    latController.clear();
-    lngController.clear();
-    fetchLocations();
+  Future<void> deleteRequest(String id) async {
+    try {
+      await ApiService.deleteRequest(id);
+      fetchRequests();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Request deleted successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Delete failed: ${e.toString()}")),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Nearby Helper')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Place Name'),
-            ),
-            TextField(
-              controller: latController,
-              decoration: const InputDecoration(labelText: 'Latitude'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: lngController,
-              decoration: const InputDecoration(labelText: 'Longitude'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: addLocation,
-              child: const Text('Save Location'),
-            ),
-            const Divider(height: 30),
-            const Text('Saved Locations', style: TextStyle(fontWeight: FontWeight.bold)),
-            Expanded(
-              child: ListView.builder(
-                itemCount: locations.length,
-                itemBuilder: (context, index) {
-                  final loc = locations[index];
-                  return ListTile(
-                    title: Text(loc['name']),
-                    subtitle: Text("Lat: ${loc['latitude']} | Lng: ${loc['longitude']}"),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+      backgroundColor: Colors.grey[100],
+      appBar: AppBar(
+        title: const Text("Nearby Helper"),
+        centerTitle: true,
+        backgroundColor: Colors.teal,
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: Colors.teal,
+        onPressed: () {
+          Navigator.pushNamed(context, '/add-request');
+        },
+        icon: const Icon(Icons.add),
+        label: const Text("Add Request"),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.teal))
+          : RefreshIndicator(
+              onRefresh: fetchRequests,
+              child: requests.isEmpty
+                  ? const Center(child: Text("No requests found."))
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: requests.length,
+                      itemBuilder: (context, index) {
+                        final req = requests[index];
+                        return Card(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          elevation: 4,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+                            leading: CircleAvatar(
+                              backgroundColor: Colors.teal[200],
+                              child: const Icon(Icons.person, color: Colors.white),
+                            ),
+                            title: Text(
+                              req['name'] ?? 'Unknown',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(
+                              req['description'] ?? 'No description provided',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              onPressed: () => deleteRequest(req['id']),
+                            ),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/request-detail',
+                                arguments: req,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
     );
   }
 }
