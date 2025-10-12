@@ -21,11 +21,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> fetchRequests() async {
     try {
       final data = await ApiService.getRequests();
+      if (!mounted) return; // ✅ Fix for async context issue
       setState(() {
         requests = data;
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         isLoading = false;
       });
@@ -38,11 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> deleteRequest(String id) async {
     try {
       await ApiService.deleteRequest(id);
+      if (!mounted) return;
       fetchRequests();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Request deleted successfully")),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Delete failed: ${e.toString()}")),
       );
@@ -87,19 +91,23 @@ class _HomeScreenState extends State<HomeScreen> {
                             contentPadding: const EdgeInsets.all(16),
                             leading: CircleAvatar(
                               backgroundColor: Colors.teal[200],
-                              child: const Icon(Icons.person, color: Colors.white),
+                              child:
+                                  const Icon(Icons.person, color: Colors.white),
                             ),
                             title: Text(
                               req['name'] ?? 'Unknown',
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             subtitle: Text(
-                              req['description'] ?? 'No description provided',
+                              req['description'] ??
+                                  'No description provided',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.redAccent),
                               onPressed: () => deleteRequest(req['id']),
                             ),
                             onTap: () {
