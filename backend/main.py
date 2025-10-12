@@ -1,4 +1,6 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
+
 from models.request_model import HelpRequest
 import json, uuid, os
 

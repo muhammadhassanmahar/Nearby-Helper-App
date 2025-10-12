@@ -1,18 +1,3 @@
 [
-    {
-        "id": "770c2372-4fb1-4c48-9402-6b36366f2871",
-        "name": "string",
-        "title": "string",
-        "description": "string",
-        "location": "string",
-        "status": "pending"
-    },
-    {
-        "id": "684c6a50-04b0-414a-af4f-8463d610a349",
-        "name": "string",
-        "title": "string",
-        "description": "string",
-        "location": "string",
-        "status": "pending"
-    }
+
 ]
