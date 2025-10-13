@@ -49,172 +49,100 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
         body: json.encode(updatedData),
       );
 
-      if (!mounted) return;
-
       if (response.statusCode == 200) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Request updated successfully")),
         );
         Navigator.pop(context, true);
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              "❌ Failed to update (Error: ${response.statusCode})",
-            ),
+                "❌ Failed to update request (${response.statusCode})"),
           ),
         );
       }
     } catch (e) {
+      debugPrint("Error updating request: $e");
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Error: $e")),
+        const SnackBar(content: Text("⚠️ An error occurred")),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text("Edit Request"),
+        backgroundColor: Colors.green,
         centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
       ),
-      body: Stack(
-        children: [
-          // Gradient Background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF43C6AC), Color(0xFF191654)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              _buildTextField(
+                controller: nameController,
+                label: "Your Name",
               ),
-            ),
-          ),
-
-          // Form with Glass Effect
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(25),
-                child: Container(
-                  padding: const EdgeInsets.all(25),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(25),
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
-                  ),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text(
-                          "Edit Help Request",
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        _buildTextField(
-                          controller: nameController,
-                          label: "Your Name",
-                          icon: Icons.person_outline,
-                        ),
-                        const SizedBox(height: 15),
-
-                        _buildTextField(
-                          controller: titleController,
-                          label: "Request Title",
-                          icon: Icons.title_outlined,
-                        ),
-                        const SizedBox(height: 15),
-
-                        _buildTextField(
-                          controller: descriptionController,
-                          label: "Description",
-                          icon: Icons.description_outlined,
-                          maxLines: 3,
-                        ),
-                        const SizedBox(height: 15),
-
-                        _buildTextField(
-                          controller: locationController,
-                          label: "Location",
-                          icon: Icons.location_on_outlined,
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Status Dropdown
-                        DropdownButtonFormField<String>(
-                          value: status,
-                          dropdownColor: Colors.black54,
-                          style: const TextStyle(color: Colors.white),
-                          decoration: InputDecoration(
-                            labelText: "Status",
-                            labelStyle:
-                                const TextStyle(color: Colors.white70),
-                            filled: true,
-                            fillColor: Colors.white.withOpacity(0.1),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(15),
-                              borderSide: BorderSide(
-                                color: Colors.white.withOpacity(0.3),
-                              ),
-                            ),
-                          ),
-                          items: const [
-                            DropdownMenuItem(
-                                value: "pending", child: Text("Pending")),
-                            DropdownMenuItem(
-                                value: "in_progress",
-                                child: Text("In Progress")),
-                            DropdownMenuItem(
-                                value: "completed", child: Text("Completed")),
-                          ],
-                          onChanged: (val) {
-                            if (val != null) setState(() => status = val);
-                          },
-                        ),
-                        const SizedBox(height: 30),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 55,
-                          child: ElevatedButton.icon(
-                            onPressed: updateRequest,
-                            icon: const Icon(Icons.save),
-                            label: const Text(
-                              "Update Request",
-                              style: TextStyle(
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.9),
-                              foregroundColor: Colors.teal.shade900,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              const SizedBox(height: 15),
+              _buildTextField(
+                controller: titleController,
+                label: "Request Title",
+              ),
+              const SizedBox(height: 15),
+              _buildTextField(
+                controller: descriptionController,
+                label: "Description",
+                maxLines: 3,
+              ),
+              const SizedBox(height: 15),
+              _buildTextField(
+                controller: locationController,
+                label: "Location",
+              ),
+              const SizedBox(height: 20),
+              DropdownButtonFormField<String>(
+                initialValue: status,
+                decoration: const InputDecoration(
+                  labelText: "Status",
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(value: "pending", child: Text("Pending")),
+                  DropdownMenuItem(
+                      value: "in_progress", child: Text("In Progress")),
+                  DropdownMenuItem(
+                      value: "completed", child: Text("Completed")),
+                ],
+                onChanged: (val) {
+                  if (val != null) setState(() => status = val);
+                },
+              ),
+              const SizedBox(height: 30),
+              ElevatedButton.icon(
+                onPressed: updateRequest,
+                icon: const Icon(Icons.save),
+                label: const Text("Update Request"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -222,32 +150,17 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
-    required IconData icon,
     int maxLines = 1,
   }) {
-    return TextField(
+    return TextFormField(
       controller: controller,
-      maxLines: maxLines,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70),
-        prefixIcon: Icon(icon, color: Colors.white70),
+        border: const OutlineInputBorder(),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.1),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(15),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(15)),
-          borderSide: BorderSide(color: Colors.white),
-        ),
+        fillColor: Colors.grey.withValues(alpha: 0.1), // ✅ replaced with .withValues()
       ),
+      maxLines: maxLines,
     );
   }
 }
