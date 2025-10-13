@@ -1,7 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:location/location.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NearbyMapScreen extends StatefulWidget {
   const NearbyMapScreen({super.key});
@@ -11,118 +11,90 @@ class NearbyMapScreen extends StatefulWidget {
 }
 
 class _NearbyMapScreenState extends State<NearbyMapScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
-  LocationData? _currentLocation;
-  final Location _locationService = Location();
-
-  final Set<Marker> _markers = {
-    Marker(
-      markerId: const MarkerId('help_request_1'),
-      position: const LatLng(24.8607, 67.0011), // Example: Karachi
-      infoWindow: const InfoWindow(
-        title: 'Need groceries delivered',
-        snippet: 'Gulshan-e-Iqbal, Karachi',
-      ),
-    ),
-    Marker(
-      markerId: const MarkerId('help_request_2'),
-      position: const LatLng(31.5204, 74.3587), // Example: Lahore
-      infoWindow: const InfoWindow(
-        title: 'Looking for medical aid',
-        snippet: 'Model Town, Lahore',
-      ),
-    ),
-  };
+  GoogleMapController? _mapController;
+  LatLng? _currentLocation;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _getCurrentLocation();
+    _determinePosition();
   }
 
-  Future<void> _getCurrentLocation() async {
-    bool serviceEnabled;
-    PermissionStatus permissionGranted;
+  /// Request permission & get current location
+  Future<void> _determinePosition() async {
+    setState(() => _loading = true);
 
-    serviceEnabled = await _locationService.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await _locationService.requestService();
-      if (!serviceEnabled) return;
+    var status = await Permission.location.request();
+    if (status.isDenied || status.isPermanentlyDenied) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Location permission denied ❌")),
+      );
+      setState(() => _loading = false);
+      return;
     }
 
-    permissionGranted = await _locationService.hasPermission();
-    if (permissionGranted == PermissionStatus.denied) {
-      permissionGranted = await _locationService.requestPermission();
-      if (permissionGranted != PermissionStatus.granted) return;
-    }
+    // ✅ New method: use LocationSettings instead of deprecated desiredAccuracy
+    Position position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.best,
+      ),
+    );
 
-    final locationData = await _locationService.getLocation();
     setState(() {
-      _currentLocation = locationData;
+      _currentLocation = LatLng(position.latitude, position.longitude);
+      _loading = false;
     });
-  }
 
-  Future<void> _goToCurrentLocation() async {
-    if (_currentLocation == null) return;
-    final controller = await _controller.future;
-    controller.animateCamera(CameraUpdate.newLatLngZoom(
-      LatLng(_currentLocation!.latitude!, _currentLocation!.longitude!),
-      14,
-    ));
+    // ✅ Use the map controller to move camera
+    if (_mapController != null) {
+      _mapController!.animateCamera(
+        CameraUpdate.newLatLngZoom(_currentLocation!, 15),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nearby Requests'),
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {}); // Refresh markers or reload from API
-            },
-          ),
-        ],
+        title: const Text("Nearby Map"),
+        backgroundColor: Colors.green,
+        centerTitle: true,
       ),
-      body: _currentLocation == null
-          ? const Center(child: CircularProgressIndicator())
-          : GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(
-                  _currentLocation!.latitude!,
-                  _currentLocation!.longitude!,
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.green),
+            )
+          : _currentLocation == null
+              ? const Center(
+                  child: Text(
+                    "Unable to get location 😕",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                )
+              : GoogleMap(
+                  onMapCreated: (controller) => _mapController = controller,
+                  initialCameraPosition: CameraPosition(
+                    target: _currentLocation!,
+                    zoom: 15,
+                  ),
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: true,
+                  markers: {
+                    Marker(
+                      markerId: const MarkerId('current_location'),
+                      position: _currentLocation!,
+                      infoWindow: const InfoWindow(title: "You are here"),
+                    ),
+                  },
                 ),
-                zoom: 13,
-              ),
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              markers: _markers,
-              onMapCreated: (GoogleMapController controller) {
-                _controller.complete(controller);
-              },
-            ),
-      floatingActionButton: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          FloatingActionButton(
-            heroTag: 'locate_me',
-            backgroundColor: Colors.teal,
-            onPressed: _goToCurrentLocation,
-            child: const Icon(Icons.my_location),
-          ),
-          const SizedBox(height: 12),
-          FloatingActionButton(
-            heroTag: 'list_view',
-            backgroundColor: Colors.orange,
-            onPressed: () {
-              Navigator.pushNamed(context, '/requests-list');
-            },
-            child: const Icon(Icons.list),
-          ),
-        ],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _determinePosition,
+        icon: const Icon(Icons.my_location),
+        label: const Text("Refresh"),
+        backgroundColor: Colors.green,
       ),
     );
   }
