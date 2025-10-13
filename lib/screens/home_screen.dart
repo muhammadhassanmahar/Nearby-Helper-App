@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nearby_helper_app/services/api_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'edit_request_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,8 +11,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool isLoading = true;
   List<dynamic> requests = [];
+  final String apiUrl = "http://127.0.0.1:8000/requests";
 
   @override
   void initState() {
@@ -20,107 +22,90 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchRequests() async {
     try {
-      final data = await ApiService.getRequests();
-      if (!mounted) return; // ✅ Fix for async context issue
-      setState(() {
-        requests = data;
-        isLoading = false;
-      });
+      final response = await http.get(Uri.parse(apiUrl));
+      if (response.statusCode == 200) {
+        setState(() {
+          requests = json.decode(response.body);
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
-      );
+      debugPrint("Error fetching requests: $e");
     }
   }
 
   Future<void> deleteRequest(String id) async {
     try {
-      await ApiService.deleteRequest(id);
-      if (!mounted) return;
-      fetchRequests();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request deleted successfully")),
-      );
+      final response = await http.delete(Uri.parse("$apiUrl/$id"));
+      if (response.statusCode == 200) {
+        if (!mounted) return; // ✅ fix async context warning
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Request deleted successfully")),
+        );
+        fetchRequests();
+      }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Delete failed: ${e.toString()}")),
-      );
+      debugPrint("Error deleting request: $e");
+    }
+  }
+
+  Future<void> navigateToEdit(Map<String, dynamic> request) async {
+    // ✅ Use mounted check to avoid async context issues
+    if (!mounted) return;
+
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditRequestScreen(request: request),
+      ),
+    );
+
+    if (updated == true && mounted) {
+      fetchRequests();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text("Nearby Helper"),
+        backgroundColor: Colors.green,
         centerTitle: true,
-        backgroundColor: Colors.teal,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: Colors.teal,
-        onPressed: () {
-          Navigator.pushNamed(context, '/add-request');
-        },
-        icon: const Icon(Icons.add),
-        label: const Text("Add Request"),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.teal))
+      body: requests.isEmpty
+          ? const Center(child: Text("No requests available"))
           : RefreshIndicator(
               onRefresh: fetchRequests,
-              child: requests.isEmpty
-                  ? const Center(child: Text("No requests found."))
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: requests.length,
-                      itemBuilder: (context, index) {
-                        final req = requests[index];
-                        return Card(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          elevation: 4,
-                          margin: const EdgeInsets.only(bottom: 16),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-                            leading: CircleAvatar(
-                              backgroundColor: Colors.teal[200],
-                              child:
-                                  const Icon(Icons.person, color: Colors.white),
-                            ),
-                            title: Text(
-                              req['name'] ?? 'Unknown',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              req['description'] ??
-                                  'No description provided',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.redAccent),
-                              onPressed: () => deleteRequest(req['id']),
-                            ),
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/request-detail',
-                                arguments: req,
-                              );
-                            },
-                          ),
-                        );
-                      },
+              child: ListView.builder(
+                itemCount: requests.length,
+                itemBuilder: (context, index) {
+                  final request = requests[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: ListTile(
+                      title: Text(request['title']),
+                      subtitle: Text(request['description']),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.blue),
+                            onPressed: () => navigateToEdit(request),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => deleteRequest(request['id']),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }
