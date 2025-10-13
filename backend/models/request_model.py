@@ -1,9 +1,10 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class HelpRequest(BaseModel):
-    id: str
+    id: Optional[str] = None
     name: str
-    title: str
+    title: Optional[str] = None
     description: str
-    location: str
+    location: Optional[str] = None
     status: str = "pending"
