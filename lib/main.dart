@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:nearby_helper_app/screens/home_screen.dart';
+import 'package:nearby_helper_app/screens/add_request_screen.dart';
 import 'package:nearby_helper_app/screens/requests_list_screen.dart';
-import 'screens/home_screen.dart';
-import 'screens/add_request_screen.dart';
+import 'package:nearby_helper_app/screens/edit_request_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -20,12 +21,24 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // 🗺️ Define app routes
+      // 🗺️ App Routes
       initialRoute: '/',
       routes: {
         '/': (context) => const HomeScreen(),
         '/add-request': (context) => const AddRequestScreen(),
         '/requests-list': (context) => const RequestsListScreen(),
+
+        // ⚠️ Provide a dummy `request` object so the route can be registered
+        '/edit-screen': (context) => const EditRequestScreen(
+              request: {
+                'id': '',
+                'name': '',
+                'title': '',
+                'description': '',
+                'location': '',
+                'status': 'pending',
+              },
+            ),
       },
     );
   }
