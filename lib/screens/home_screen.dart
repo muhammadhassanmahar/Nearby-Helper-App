@@ -18,11 +18,12 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchRequests();
   }
 
-  /// ✅ Fetch all requests from API
+  /// ✅ Fetch all requests from API safely
   Future<void> fetchRequests() async {
     try {
       final data = await ApiService.getRequests();
-      if (!mounted) return;
+
+      if (!mounted) return; // Prevent context use after async gap
       setState(() {
         requests = data;
         isLoading = false;
@@ -30,26 +31,34 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading requests: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading requests: ${e.toString()}")),
+        );
+      }
     }
   }
 
-  /// ✅ Delete a specific request
+  /// ✅ Delete a specific request safely
   Future<void> deleteRequest(String id) async {
     try {
       await ApiService.deleteRequest(id);
       if (!mounted) return;
+
       await fetchRequests();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Request deleted successfully")),
-      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Request deleted successfully")),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to delete: ${e.toString()}")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to delete: ${e.toString()}")),
+        );
+      }
     }
   }
 
@@ -58,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
 
+      /// ✅ AppBar
       appBar: AppBar(
         title: const Text(
           "Nearby Helper",
@@ -65,17 +75,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         centerTitle: true,
         backgroundColor: Colors.teal,
-
-        /// ✅ Added Nearby Icon Button (top-right)
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.map, color: Colors.white),
-            tooltip: "View Nearby Requests",
-            onPressed: () {
-              Navigator.pushNamed(context, '/nearby-map');
-            },
-          ),
-        ],
       ),
 
       /// ✅ Floating Add Request Button
@@ -109,8 +108,10 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemBuilder: (context, index) {
                         final req = requests[index];
                         final name = req['name'] ?? 'Unknown';
-                        final desc = req['description'] ?? 'No description provided';
-                        final location = req['location'] ?? 'Location not provided';
+                        final desc =
+                            req['description'] ?? 'No description provided';
+                        final location =
+                            req['location'] ?? 'Location not provided';
                         final date = req['createdAt'] != null
                             ? DateTime.tryParse(req['createdAt'] ?? '')
                                     ?.toLocal()
@@ -149,12 +150,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                     desc,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(color: Colors.black87),
+                                    style:
+                                        const TextStyle(color: Colors.black87),
                                   ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
-                                      const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                      const Icon(Icons.location_on,
+                                          size: 16, color: Colors.teal),
                                       const SizedBox(width: 4),
                                       Expanded(
                                         child: Text(
@@ -183,8 +186,10 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.redAccent),
-                              onPressed: () => deleteRequest(req['id'].toString()),
+                              icon: const Icon(Icons.delete,
+                                  color: Colors.redAccent),
+                              onPressed: () =>
+                                  deleteRequest(req['id'].toString()),
                             ),
                             onTap: () {
                               Navigator.pushNamed(
