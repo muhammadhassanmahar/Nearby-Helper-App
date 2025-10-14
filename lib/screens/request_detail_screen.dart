@@ -14,30 +14,29 @@ class RequestDetailScreen extends StatefulWidget {
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   final String apiUrl = "http://127.0.0.1:8000/requests";
 
-  /// 🗑️ Delete request from backend (safe context handling)
+  /// 🗑️ Delete request safely with correct context usage
   Future<void> deleteRequest() async {
-    final ctx = context; // Save current context safely
     try {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      if (!mounted || !ctx.mounted) return;
+      if (!mounted) return; // ✅ Ensure widget still exists
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(ctx).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Request deleted successfully")),
         );
-        Navigator.pop(ctx, true);
+        Navigator.pop(context, true);
       } else {
-        ScaffoldMessenger.of(ctx).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("❌ Failed to delete (Error ${response.statusCode})"),
           ),
         );
       }
     } catch (e) {
-      if (!mounted || !ctx.mounted) return;
-      ScaffoldMessenger.of(ctx).showSnackBar(
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Error deleting request: $e")),
       );
     }
@@ -81,12 +80,12 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 infoTile("Name", request['name']),
                 infoTile("Description", request['description']),
                 infoTile("Location", request['location']),
-
-                // ✅ Show phone number only if provided
-                if (request['phone'] != null &&
-                    request['phone'].toString().trim().isNotEmpty)
-                  infoTile("Phone", request['phone']),
-
+                infoTile(
+                  "Phone Number",
+                  request['phone']?.toString().isNotEmpty == true
+                      ? request['phone']
+                      : "Not provided",
+                ),
                 infoTile("Status",
                     request['status']?.toString().toUpperCase() ?? "Pending"),
 
@@ -97,18 +96,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () async {
-                          final ctx = context; // Safe context reference
-                          final updated = await Navigator.push(
-                            ctx,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  EditRequestScreen(request: request),
-                            ),
-                          );
-
-                          if (!mounted || !ctx.mounted) return;
-                          if (updated == true) Navigator.pop(ctx, true);
+                        onPressed: () {
+                          _navigateToEditScreen(request);
                         },
                         icon: const Icon(Icons.edit),
                         label: const Text("Edit"),
@@ -144,6 +133,21 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         ),
       ),
     );
+  }
+
+  /// ✅ Separated navigation method to fix async context warning
+  Future<void> _navigateToEditScreen(Map<String, dynamic> request) async {
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditRequestScreen(request: request),
+      ),
+    );
+
+    if (!mounted) return; // Ensure still mounted before using context
+    if (updated == true) {
+      Navigator.pop(context, true);
+    }
   }
 
   /// 📋 Reusable info tile widget
