@@ -13,6 +13,7 @@ class _AddRequestScreenState extends State<AddRequestScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
@@ -24,8 +25,10 @@ class _AddRequestScreenState extends State<AddRequestScreen>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: const Duration(milliseconds: 300));
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
@@ -40,6 +43,7 @@ class _AddRequestScreenState extends State<AddRequestScreen>
     try {
       final requestData = {
         'name': _nameController.text.trim(),
+        'title': _titleController.text.trim(),
         'description': _descController.text.trim(),
         'phone': _phoneController.text.trim(),
         'location': _locationController.text.trim(),
@@ -82,6 +86,7 @@ class _AddRequestScreenState extends State<AddRequestScreen>
   void dispose() {
     _controller.dispose();
     _nameController.dispose();
+    _titleController.dispose();
     _descController.dispose();
     _phoneController.dispose();
     _locationController.dispose();
@@ -100,7 +105,7 @@ class _AddRequestScreenState extends State<AddRequestScreen>
       ),
       body: Stack(
         children: [
-          // Background gradient
+          // 🌈 Background gradient
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -111,7 +116,7 @@ class _AddRequestScreenState extends State<AddRequestScreen>
             ),
           ),
 
-          // Glassmorphism form container
+          // 🪟 Glassmorphism form container
           Center(
             child: Padding(
               padding: const EdgeInsets.all(20),
@@ -150,6 +155,13 @@ class _AddRequestScreenState extends State<AddRequestScreen>
                             const SizedBox(height: 20),
 
                             _buildTextField(
+                              controller: _titleController,
+                              hint: "Title (e.g. Need water, food, etc.)",
+                              icon: Icons.title_outlined,
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildTextField(
                               controller: _phoneController,
                               hint: "Phone Number",
                               icon: Icons.phone,
@@ -159,7 +171,7 @@ class _AddRequestScreenState extends State<AddRequestScreen>
 
                             _buildTextField(
                               controller: _locationController,
-                              hint: "Location (e.g. Street, Area, City)",
+                              hint: "Location (Street, Area, City)",
                               icon: Icons.location_on_outlined,
                             ),
                             const SizedBox(height: 20),
