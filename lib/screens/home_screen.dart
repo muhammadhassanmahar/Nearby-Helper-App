@@ -18,7 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchRequests();
   }
 
-  /// Fetch all requests from API
+  /// ✅ Fetch all requests from API
   Future<void> fetchRequests() async {
     try {
       final data = await ApiService.getRequests();
@@ -36,12 +36,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// Delete a specific request
+  /// ✅ Delete a specific request
   Future<void> deleteRequest(String id) async {
     try {
       await ApiService.deleteRequest(id);
       if (!mounted) return;
-      fetchRequests();
+      await fetchRequests();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Request deleted successfully")),
       );
@@ -57,23 +57,52 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[100],
+
       appBar: AppBar(
-        title: const Text("Nearby Helper"),
+        title: const Text(
+          "Nearby Helper",
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
         backgroundColor: Colors.teal,
+
+        /// ✅ Added Nearby Icon Button (top-right)
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.map, color: Colors.white),
+            tooltip: "View Nearby Requests",
+            onPressed: () {
+              Navigator.pushNamed(context, '/nearby-map');
+            },
+          ),
+        ],
       ),
+
+      /// ✅ Floating Add Request Button
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.teal,
         onPressed: () => Navigator.pushNamed(context, '/add-request'),
-        icon: const Icon(Icons.add),
-        label: const Text("Add Request"),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          "Add Request",
+          style: TextStyle(color: Colors.white),
+        ),
       ),
+
+      /// ✅ Body
       body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Colors.teal))
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.teal),
+            )
           : RefreshIndicator(
               onRefresh: fetchRequests,
               child: requests.isEmpty
-                  ? const Center(child: Text("No requests found."))
+                  ? const Center(
+                      child: Text(
+                        "No help requests found.",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    )
                   : ListView.builder(
                       padding: const EdgeInsets.all(16),
                       itemCount: requests.length,
@@ -81,8 +110,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         final req = requests[index];
                         final name = req['name'] ?? 'Unknown';
                         final desc = req['description'] ?? 'No description provided';
+                        final location = req['location'] ?? 'Location not provided';
                         final date = req['createdAt'] != null
-                            ? DateTime.tryParse(req['createdAt'] ?? '')?.toLocal().toString().split(' ').first ?? ''
+                            ? DateTime.tryParse(req['createdAt'] ?? '')
+                                    ?.toLocal()
+                                    .toString()
+                                    .split(' ')
+                                    .first ??
+                                ''
                             : '';
 
                         return Card(
@@ -106,7 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             subtitle: Padding(
-                              padding: const EdgeInsets.only(top: 4.0),
+                              padding: const EdgeInsets.only(top: 6.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -115,6 +150,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(color: Colors.black87),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.location_on, size: 16, color: Colors.teal),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          location,
+                                          style: const TextStyle(
+                                            color: Colors.black54,
+                                            fontSize: 13,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   if (date.isNotEmpty)
                                     Padding(
