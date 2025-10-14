@@ -1,12 +1,12 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
-from models.request_model import HelpRequest
+from models.request_model import HelpRequest, Comment
 import json, uuid, os
 
 # ---------------------------
 # ✅ Initialize FastAPI App
 # ---------------------------
-app = FastAPI(title="Nearby Helper API", version="1.1")
+app = FastAPI(title="Nearby Helper API", version="1.2")
 
 # ✅ Enable CORS (for Flutter frontend)
 app.add_middleware(
@@ -41,6 +41,7 @@ def save_data(data):
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
 
+
 # ---------------------------
 # ✅ API Routes
 # ---------------------------
@@ -60,13 +61,14 @@ def add_request(request: HelpRequest):
     """Add a new help request"""
     data = load_data()
 
-    # ✅ Auto-generate ID
     request.id = str(uuid.uuid4())
-
-    # ✅ Ensure phone number is included
     new_request = request.dict()
+
     if "phone_number" not in new_request:
-        new_request["phone_number"] = None  # Default if not provided
+        new_request["phone_number"] = None
+
+    if "comments" not in new_request:
+        new_request["comments"] = []
 
     data.append(new_request)
     save_data(data)
@@ -85,7 +87,8 @@ def update_request(request_id: str, updated: HelpRequest):
     for i, req in enumerate(data):
         if req["id"] == request_id:
             updated_dict = updated.dict()
-            updated_dict["id"] = request_id  # Keep same ID
+            updated_dict["id"] = request_id
+            updated_dict["comments"] = req.get("comments", [])
             if "phone_number" not in updated_dict:
                 updated_dict["phone_number"] = req.get("phone_number")
             data[i] = updated_dict
@@ -106,3 +109,31 @@ def delete_request(request_id: str):
 
     save_data(new_data)
     return {"message": "Request deleted successfully"}
+
+
+# ---------------------------
+# ✅ Comment System Routes
+# ---------------------------
+@app.post("/requests/{request_id}/comments")
+def add_comment(request_id: str, comment: Comment):
+    """Add a comment to a help request"""
+    data = load_data()
+
+    for req in data:
+        if req["id"] == request_id:
+            comment.id = str(uuid.uuid4())
+            req.setdefault("comments", []).append(comment.dict())
+            save_data(data)
+            return {"message": "Comment added successfully", "comment": comment}
+
+    raise HTTPException(status_code=404, detail="Request not found")
+
+
+@app.get("/requests/{request_id}/comments")
+def get_comments(request_id: str):
+    """Get all comments for a help request"""
+    data = load_data()
+    for req in data:
+        if req["id"] == request_id:
+            return req.get("comments", [])
+    raise HTTPException(status_code=404, detail="Request not found")
