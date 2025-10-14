@@ -14,6 +14,9 @@ class _AddRequestScreenState extends State<AddRequestScreen>
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+
   bool isLoading = false;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -38,6 +41,8 @@ class _AddRequestScreenState extends State<AddRequestScreen>
       final requestData = {
         'name': _nameController.text.trim(),
         'description': _descController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'location': _locationController.text.trim(),
       };
 
       await ApiService.addRequest(requestData);
@@ -78,6 +83,8 @@ class _AddRequestScreenState extends State<AddRequestScreen>
     _controller.dispose();
     _nameController.dispose();
     _descController.dispose();
+    _phoneController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
@@ -121,62 +128,82 @@ class _AddRequestScreenState extends State<AddRequestScreen>
                     ),
                     child: Form(
                       key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            "Need Help?",
-                            style: TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          _buildTextField(
-                            controller: _nameController,
-                            hint: "Your Name",
-                            icon: Icons.person_outline,
-                          ),
-                          const SizedBox(height: 20),
-                          _buildTextField(
-                            controller: _descController,
-                            hint: "Describe your problem",
-                            icon: Icons.help_outline,
-                            maxLines: 4,
-                          ),
-                          const SizedBox(height: 30),
-
-                          ScaleTransition(
-                            scale: _scaleAnimation,
-                            child: SizedBox(
-                              width: double.infinity,
-                              height: 55,
-                              child: ElevatedButton(
-                                onPressed: isLoading ? null : _submitRequest,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white.withValues(alpha: 0.9),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                ),
-                                child: isLoading
-                                    ? const CircularProgressIndicator(
-                                        strokeWidth: 3,
-                                        color: Colors.teal,
-                                      )
-                                    : const Text(
-                                        "Submit Request",
-                                        style: TextStyle(
-                                          fontSize: 17,
-                                          color: Colors.teal,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text(
+                              "Need Help?",
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 20),
+
+                            _buildTextField(
+                              controller: _nameController,
+                              hint: "Your Name",
+                              icon: Icons.person_outline,
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildTextField(
+                              controller: _phoneController,
+                              hint: "Phone Number",
+                              icon: Icons.phone,
+                              keyboardType: TextInputType.phone,
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildTextField(
+                              controller: _locationController,
+                              hint: "Location (e.g. Street, Area, City)",
+                              icon: Icons.location_on_outlined,
+                            ),
+                            const SizedBox(height: 20),
+
+                            _buildTextField(
+                              controller: _descController,
+                              hint: "Describe your problem",
+                              icon: Icons.help_outline,
+                              maxLines: 4,
+                            ),
+                            const SizedBox(height: 30),
+
+                            ScaleTransition(
+                              scale: _scaleAnimation,
+                              child: SizedBox(
+                                width: double.infinity,
+                                height: 55,
+                                child: ElevatedButton(
+                                  onPressed: isLoading ? null : _submitRequest,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.9),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                  ),
+                                  child: isLoading
+                                      ? const CircularProgressIndicator(
+                                          strokeWidth: 3,
+                                          color: Colors.teal,
+                                        )
+                                      : const Text(
+                                          "Submit Request",
+                                          style: TextStyle(
+                                            fontSize: 17,
+                                            color: Colors.teal,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -194,10 +221,12 @@ class _AddRequestScreenState extends State<AddRequestScreen>
     required String hint,
     required IconData icon,
     int maxLines = 1,
+    TextInputType keyboardType = TextInputType.text,
   }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       validator: (value) =>
           value == null || value.isEmpty ? 'Please fill this field' : null,
       style: const TextStyle(color: Colors.white, fontSize: 16),
