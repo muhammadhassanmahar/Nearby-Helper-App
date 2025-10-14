@@ -20,14 +20,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      // ✅ Context guard (avoid use_build_context_synchronously)
-      if (!mounted) return;
+      // ✅ Guard BuildContext safely after async gap
+      if (!context.mounted) return;
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Request deleted successfully")),
         );
-        if (!mounted) return;
         Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -37,7 +36,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         );
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("⚠️ Error deleting request: $e")),
       );
@@ -101,11 +100,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             ),
                           );
 
-                          // ✅ Proper context guard after async
-                          if (!mounted) return;
+                          // ✅ Safe BuildContext check after async
+                          if (!context.mounted) return;
 
                           if (updated == true) {
-                            if (!mounted) return;
                             Navigator.pop(context, true); // Refresh list
                           }
                         },
