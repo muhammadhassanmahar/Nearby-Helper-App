@@ -7,4 +7,5 @@ class HelpRequest(BaseModel):
     title: Optional[str] = None
     description: str
     location: Optional[str] = None
+    phone_number: Optional[str] = None  # ✅ New field added
     status: str = "pending"
