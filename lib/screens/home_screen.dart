@@ -18,25 +18,25 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchRequests();
   }
 
+  /// Fetch all requests from API
   Future<void> fetchRequests() async {
     try {
       final data = await ApiService.getRequests();
-      if (!mounted) return; // ✅ Fix for async context issue
+      if (!mounted) return;
       setState(() {
         requests = data;
         isLoading = false;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+        SnackBar(content: Text("Error loading requests: ${e.toString()}")),
       );
     }
   }
 
+  /// Delete a specific request
   Future<void> deleteRequest(String id) async {
     try {
       await ApiService.deleteRequest(id);
@@ -48,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Delete failed: ${e.toString()}")),
+        SnackBar(content: Text("Failed to delete: ${e.toString()}")),
       );
     }
   }
@@ -64,9 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: Colors.teal,
-        onPressed: () {
-          Navigator.pushNamed(context, '/add-request');
-        },
+        onPressed: () => Navigator.pushNamed(context, '/add-request'),
         icon: const Icon(Icons.add),
         label: const Text("Add Request"),
       ),
@@ -81,34 +79,60 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: requests.length,
                       itemBuilder: (context, index) {
                         final req = requests[index];
+                        final name = req['name'] ?? 'Unknown';
+                        final desc = req['description'] ?? 'No description provided';
+                        final date = req['createdAt'] != null
+                            ? DateTime.tryParse(req['createdAt'] ?? '')?.toLocal().toString().split(' ').first ?? ''
+                            : '';
+
                         return Card(
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          elevation: 4,
+                          elevation: 3,
                           margin: const EdgeInsets.only(bottom: 16),
                           child: ListTile(
                             contentPadding: const EdgeInsets.all(16),
                             leading: CircleAvatar(
-                              backgroundColor: Colors.teal[200],
-                              child:
-                                  const Icon(Icons.person, color: Colors.white),
+                              radius: 26,
+                              backgroundColor: Colors.teal.shade300,
+                              child: const Icon(Icons.person, color: Colors.white),
                             ),
                             title: Text(
-                              req['name'] ?? 'Unknown',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
                             ),
-                            subtitle: Text(
-                              req['description'] ??
-                                  'No description provided',
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                            subtitle: Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    desc,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.black87),
+                                  ),
+                                  if (date.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: Text(
+                                        "Date: $date",
+                                        style: const TextStyle(
+                                          color: Colors.grey,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete,
-                                  color: Colors.redAccent),
-                              onPressed: () => deleteRequest(req['id']),
+                              icon: const Icon(Icons.delete, color: Colors.redAccent),
+                              onPressed: () => deleteRequest(req['id'].toString()),
                             ),
                             onTap: () {
                               Navigator.pushNamed(
