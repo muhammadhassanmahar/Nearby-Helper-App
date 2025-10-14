@@ -20,27 +20,28 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
+      // ✅ Use correct `mounted` guard pattern (for Flutter 3.27+)
       if (!mounted) return;
 
       if (response.statusCode == 200) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Request deleted successfully")),
         );
-        Navigator.pop(context, true); // Return to list after delete
+        Navigator.pop(context, true);
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                "❌ Failed to delete (Error ${response.statusCode})"),
+            content: Text("❌ Failed to delete (Error ${response.statusCode})"),
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("⚠️ Error deleting request: $e")),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Error deleting request: $e")),
+      );
     }
   }
 
@@ -58,8 +59,9 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
         padding: const EdgeInsets.all(16),
         child: Card(
           elevation: 3,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -77,7 +79,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // 🧾 Request Info
+                // 🧾 Request Info Tiles
                 infoTile("Name", request['name']),
                 infoTile("Description", request['description']),
                 infoTile("Location", request['location']),
@@ -86,7 +88,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
                 const Spacer(),
 
-                // 🧭 Buttons
+                // 🧭 Action Buttons
                 Row(
                   children: [
                     Expanded(
@@ -100,15 +102,17 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             ),
                           );
 
+                          // ✅ Guard context after async gap
                           if (!mounted) return;
+
                           if (updated == true) {
-                            Navigator.pop(context, true); // Refresh on return
+                            Navigator.pop(context, true); // Refresh list
                           }
                         },
                         icon: const Icon(Icons.edit),
                         label: const Text("Edit"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal.withOpacity(0.9),
+                          backgroundColor: Colors.teal.withValues(alpha: 0.9),
                           minimumSize: const Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -123,7 +127,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                         icon: const Icon(Icons.delete),
                         label: const Text("Delete"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.withOpacity(0.9),
+                          backgroundColor: Colors.red.withValues(alpha: 0.9),
                           minimumSize: const Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -141,13 +145,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
-  /// 📋 Reusable info tile
+  /// 📋 Reusable info tile widget
   Widget infoTile(String label, String? value) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.08),
+        color: Colors.grey.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
