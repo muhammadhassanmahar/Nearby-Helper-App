@@ -20,7 +20,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      if (!mounted) return; // ✅ Ensure widget still exists
+      if (!mounted) return; // ✅ Ensures widget still exists after await
 
       if (response.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,14 +80,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 infoTile("Name", request['name']),
                 infoTile("Description", request['description']),
                 infoTile("Location", request['location']),
+
+                // ✅ Correct phone number key from backend
                 infoTile(
                   "Phone Number",
-                  request['phone']?.toString().isNotEmpty == true
-                      ? request['phone']
+                  request['phone_number']?.toString().isNotEmpty == true
+                      ? request['phone_number']
                       : "Not provided",
                 ),
-                infoTile("Status",
-                    request['status']?.toString().toUpperCase() ?? "Pending"),
+
+                infoTile(
+                  "Status",
+                  request['status']?.toString().toUpperCase() ?? "PENDING",
+                ),
 
                 const Spacer(),
 
@@ -96,13 +101,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          _navigateToEditScreen(request);
+                        onPressed: () async {
+                          await _navigateToEditScreen(request);
                         },
                         icon: const Icon(Icons.edit),
                         label: const Text("Edit"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.teal.withValues(alpha: 0.9),
+                          backgroundColor:
+                              Colors.teal.withValues(alpha: 0.9), // ✅ fixed
                           minimumSize: const Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -117,7 +123,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                         icon: const Icon(Icons.delete),
                         label: const Text("Delete"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red.withValues(alpha: 0.9),
+                          backgroundColor:
+                              Colors.red.withValues(alpha: 0.9), // ✅ fixed
                           minimumSize: const Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -135,7 +142,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
-  /// ✅ Separated navigation method to fix async context warning
+  /// ✅ Safe navigation method
   Future<void> _navigateToEditScreen(Map<String, dynamic> request) async {
     final updated = await Navigator.push(
       context,
@@ -144,7 +151,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       ),
     );
 
-    if (!mounted) return; // Ensure still mounted before using context
+    if (!mounted) return;
     if (updated == true) {
       Navigator.pop(context, true);
     }
@@ -156,7 +163,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.08),
+        color: Colors.grey.withValues(alpha: 0.08), // ✅ fixed
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
