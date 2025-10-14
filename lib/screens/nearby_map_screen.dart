@@ -13,6 +13,7 @@ class NearbyMapScreen extends StatefulWidget {
 class _NearbyMapScreenState extends State<NearbyMapScreen> {
   GoogleMapController? _mapController;
   LatLng? _currentLocation;
+  LatLng? _selectedLocation;
   bool _loading = true;
 
   @override
@@ -35,19 +36,16 @@ class _NearbyMapScreenState extends State<NearbyMapScreen> {
       return;
     }
 
-    // ✅ New method: use LocationSettings instead of deprecated desiredAccuracy
     Position position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.best,
-      ),
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.best),
     );
 
     setState(() {
       _currentLocation = LatLng(position.latitude, position.longitude);
+      _selectedLocation = _currentLocation;
       _loading = false;
     });
 
-    // ✅ Use the map controller to move camera
     if (_mapController != null) {
       _mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(_currentLocation!, 15),
@@ -59,7 +57,7 @@ class _NearbyMapScreenState extends State<NearbyMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Nearby Map"),
+        title: const Text("Select Location"),
         backgroundColor: Colors.green,
         centerTitle: true,
       ),
@@ -69,10 +67,7 @@ class _NearbyMapScreenState extends State<NearbyMapScreen> {
             )
           : _currentLocation == null
               ? const Center(
-                  child: Text(
-                    "Unable to get location 😕",
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  child: Text("Unable to get location 😕"),
                 )
               : GoogleMap(
                   onMapCreated: (controller) => _mapController = controller,
@@ -82,20 +77,29 @@ class _NearbyMapScreenState extends State<NearbyMapScreen> {
                   ),
                   myLocationEnabled: true,
                   myLocationButtonEnabled: true,
+                  onTap: (LatLng tappedPoint) {
+                    setState(() => _selectedLocation = tappedPoint);
+                  },
                   markers: {
-                    Marker(
-                      markerId: const MarkerId('current_location'),
-                      position: _currentLocation!,
-                      infoWindow: const InfoWindow(title: "You are here"),
-                    ),
+                    if (_selectedLocation != null)
+                      Marker(
+                        markerId: const MarkerId('selected_location'),
+                        position: _selectedLocation!,
+                        infoWindow:
+                            const InfoWindow(title: "Selected Location"),
+                      ),
                   },
                 ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _determinePosition,
-        icon: const Icon(Icons.my_location),
-        label: const Text("Refresh"),
-        backgroundColor: Colors.green,
-      ),
+      floatingActionButton: _selectedLocation == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () {
+                Navigator.pop(context, _selectedLocation);
+              },
+              icon: const Icon(Icons.check),
+              label: const Text("Confirm"),
+              backgroundColor: Colors.green,
+            ),
     );
   }
 }
