@@ -6,12 +6,12 @@ import json, uuid, os
 # ---------------------------
 # ✅ Initialize FastAPI App
 # ---------------------------
-app = FastAPI(title="Nearby Helper API", version="1.0")
+app = FastAPI(title="Nearby Helper API", version="1.1")
 
 # ✅ Enable CORS (for Flutter frontend)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For now allow all (you can later restrict this)
+    allow_origins=["*"],  # You can later restrict to specific domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,7 +20,9 @@ app.add_middleware(
 # ---------------------------
 # ✅ Data File Setup
 # ---------------------------
-DATA_FILE = os.path.join(os.path.dirname(__file__), "data", "requests.json")
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+DATA_FILE = os.path.join(DATA_DIR, "requests.json")
 
 # ---------------------------
 # ✅ Helper Functions
@@ -57,10 +59,23 @@ def get_requests():
 def add_request(request: HelpRequest):
     """Add a new help request"""
     data = load_data()
+
+    # ✅ Auto-generate ID
     request.id = str(uuid.uuid4())
-    data.append(request.dict())
+
+    # ✅ Ensure phone number is included
+    new_request = request.dict()
+    if "phone_number" not in new_request:
+        new_request["phone_number"] = None  # Default if not provided
+
+    data.append(new_request)
     save_data(data)
-    return {"message": "Request added successfully", "id": request.id}
+
+    return {
+        "message": "Request added successfully",
+        "id": request.id,
+        "phone_number": request.phone_number,
+    }
 
 
 @app.put("/requests/{request_id}")
@@ -69,12 +84,14 @@ def update_request(request_id: str, updated: HelpRequest):
     data = load_data()
     for i, req in enumerate(data):
         if req["id"] == request_id:
-            # Keep same ID while updating
             updated_dict = updated.dict()
-            updated_dict["id"] = request_id
+            updated_dict["id"] = request_id  # Keep same ID
+            if "phone_number" not in updated_dict:
+                updated_dict["phone_number"] = req.get("phone_number")
             data[i] = updated_dict
             save_data(data)
             return {"message": "Request updated successfully"}
+
     raise HTTPException(status_code=404, detail="Request not found")
 
 
@@ -83,7 +100,9 @@ def delete_request(request_id: str):
     """Delete a help request"""
     data = load_data()
     new_data = [req for req in data if req["id"] != request_id]
+
     if len(new_data) == len(data):
         raise HTTPException(status_code=404, detail="Request not found")
+
     save_data(new_data)
     return {"message": "Request deleted successfully"}
