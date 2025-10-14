@@ -16,14 +16,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
 
   /// 🗑️ Delete request from backend (safe context handling)
   Future<void> deleteRequest() async {
-    // Save current context reference (safe pattern)
-    final ctx = context;
-
+    final ctx = context; // Save current context safely
     try {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      // Guard context after async gap
       if (!mounted || !ctx.mounted) return;
 
       if (response.statusCode == 200) {
@@ -70,7 +67,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               children: [
                 Center(
                   child: Text(
-                    request['title'] ?? "No Title",
+                    request['title'] ?? request['name'] ?? "Help Request",
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -84,8 +81,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 infoTile("Name", request['name']),
                 infoTile("Description", request['description']),
                 infoTile("Location", request['location']),
+
+                // ✅ Show phone number only if provided
+                if (request['phone'] != null &&
+                    request['phone'].toString().trim().isNotEmpty)
+                  infoTile("Phone", request['phone']),
+
                 infoTile("Status",
-                    request['status']?.toString().toUpperCase()),
+                    request['status']?.toString().toUpperCase() ?? "Pending"),
 
                 const Spacer(),
 
@@ -95,7 +98,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () async {
-                          final ctx = context; // Save context safely
+                          final ctx = context; // Safe context reference
                           final updated = await Navigator.push(
                             ctx,
                             MaterialPageRoute(
@@ -105,10 +108,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           );
 
                           if (!mounted || !ctx.mounted) return;
-
-                          if (updated == true) {
-                            Navigator.pop(ctx, true); // Refresh list
-                          }
+                          if (updated == true) Navigator.pop(ctx, true);
                         },
                         icon: const Icon(Icons.edit),
                         label: const Text("Edit"),
