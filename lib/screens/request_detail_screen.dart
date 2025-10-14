@@ -20,17 +20,16 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      // ✅ Use correct `mounted` guard pattern (for Flutter 3.27+)
+      // ✅ Context guard (avoid use_build_context_synchronously)
       if (!mounted) return;
 
       if (response.statusCode == 200) {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Request deleted successfully")),
         );
+        if (!mounted) return;
         Navigator.pop(context, true);
       } else {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("❌ Failed to delete (Error ${response.statusCode})"),
@@ -102,10 +101,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                             ),
                           );
 
-                          // ✅ Guard context after async gap
+                          // ✅ Proper context guard after async
                           if (!mounted) return;
 
                           if (updated == true) {
+                            if (!mounted) return;
                             Navigator.pop(context, true); // Refresh list
                           }
                         },
