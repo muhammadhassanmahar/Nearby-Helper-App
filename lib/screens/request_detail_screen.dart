@@ -14,33 +14,31 @@ class RequestDetailScreen extends StatefulWidget {
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   final String apiUrl = "http://127.0.0.1:8000/requests";
 
+  /// 🗑️ Delete request from backend
   Future<void> deleteRequest() async {
     try {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      if (!mounted) return; // ✅ Ensures safe use of context
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Request deleted successfully ✅")),
-          );
-          Navigator.pop(context, true); // Go back to list after delete
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Request deleted successfully")),
+        );
+        Navigator.pop(context, true); // Return to list after delete
       } else {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Failed to delete ❌ (${response.statusCode})"),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                "❌ Failed to delete (Error ${response.statusCode})"),
+          ),
+        );
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error deleting request ❌ $e")),
+          SnackBar(content: Text("⚠️ Error deleting request: $e")),
         );
       }
     }
@@ -53,7 +51,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Request Details"),
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.teal,
         centerTitle: true,
       ),
       body: Padding(
@@ -78,11 +76,17 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
+
+                // 🧾 Request Info
                 infoTile("Name", request['name']),
                 infoTile("Description", request['description']),
                 infoTile("Location", request['location']),
-                infoTile("Status", request['status']?.toString().toUpperCase()),
+                infoTile("Status",
+                    request['status']?.toString().toUpperCase()),
+
                 const Spacer(),
+
+                // 🧭 Buttons
                 Row(
                   children: [
                     Expanded(
@@ -97,15 +101,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           );
 
                           if (!mounted) return;
-                          if (updated == true && context.mounted) {
-                            Navigator.pop(context, true); // Refresh list
+                          if (updated == true) {
+                            Navigator.pop(context, true); // Refresh on return
                           }
                         },
                         icon: const Icon(Icons.edit),
                         label: const Text("Edit"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.teal.withValues(alpha: 0.9), // ✅ modern API
+                          backgroundColor: Colors.teal.withOpacity(0.9),
                           minimumSize: const Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -120,8 +123,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                         icon: const Icon(Icons.delete),
                         label: const Text("Delete"),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              Colors.red.withValues(alpha: 0.9), // ✅ modern API
+                          backgroundColor: Colors.red.withOpacity(0.9),
                           minimumSize: const Size(double.infinity, 48),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -139,12 +141,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
+  /// 📋 Reusable info tile
   Widget infoTile(String label, String? value) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.withValues(alpha: 0.08), // ✅ latest Flutter syntax
+        color: Colors.grey.withOpacity(0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
