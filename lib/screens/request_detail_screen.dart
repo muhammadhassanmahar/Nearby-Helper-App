@@ -14,30 +14,33 @@ class RequestDetailScreen extends StatefulWidget {
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
   final String apiUrl = "http://127.0.0.1:8000/requests";
 
-  /// 🗑️ Delete request from backend
+  /// 🗑️ Delete request from backend (safe context handling)
   Future<void> deleteRequest() async {
+    // Save current context reference (safe pattern)
+    final ctx = context;
+
     try {
       final response =
           await http.delete(Uri.parse("$apiUrl/${widget.request['id']}"));
 
-      // ✅ Guard BuildContext safely after async gap
-      if (!context.mounted) return;
+      // Guard context after async gap
+      if (!mounted || !ctx.mounted) return;
 
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(content: Text("✅ Request deleted successfully")),
         );
-        Navigator.pop(context, true);
+        Navigator.pop(ctx, true);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(ctx).showSnackBar(
           SnackBar(
             content: Text("❌ Failed to delete (Error ${response.statusCode})"),
           ),
         );
       }
     } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
+      if (!mounted || !ctx.mounted) return;
+      ScaffoldMessenger.of(ctx).showSnackBar(
         SnackBar(content: Text("⚠️ Error deleting request: $e")),
       );
     }
@@ -77,7 +80,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // 🧾 Request Info Tiles
+                // 🧾 Info tiles
                 infoTile("Name", request['name']),
                 infoTile("Description", request['description']),
                 infoTile("Location", request['location']),
@@ -92,19 +95,19 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () async {
+                          final ctx = context; // Save context safely
                           final updated = await Navigator.push(
-                            context,
+                            ctx,
                             MaterialPageRoute(
                               builder: (context) =>
                                   EditRequestScreen(request: request),
                             ),
                           );
 
-                          // ✅ Safe BuildContext check after async
-                          if (!context.mounted) return;
+                          if (!mounted || !ctx.mounted) return;
 
                           if (updated == true) {
-                            Navigator.pop(context, true); // Refresh list
+                            Navigator.pop(ctx, true); // Refresh list
                           }
                         },
                         icon: const Icon(Icons.edit),
