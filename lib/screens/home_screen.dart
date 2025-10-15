@@ -31,8 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
         requests = data;
       });
     } catch (e) {
-      if (!mounted) return;
-      if (context.mounted) {
+      if (mounted && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load requests: $e')),
         );
@@ -42,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ✅ Add Comment function (fixed)
+  // ✅ Add Comment Dialog + Instant UI Update
   Future<void> addCommentDialog(String requestId) async {
     final TextEditingController authorController = TextEditingController();
     final TextEditingController commentController = TextEditingController();
@@ -56,15 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             TextField(
               controller: authorController,
-              decoration: const InputDecoration(
-                labelText: 'Your Name',
-              ),
+              decoration: const InputDecoration(labelText: 'Your Name'),
             ),
             TextField(
               controller: commentController,
-              decoration: const InputDecoration(
-                labelText: 'Comment',
-              ),
+              decoration: const InputDecoration(labelText: 'Comment'),
             ),
           ],
         ),
@@ -77,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               final author = authorController.text.trim();
               final message = commentController.text.trim();
+
               if (author.isEmpty || message.isEmpty) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -93,14 +89,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   message: message,
                 );
 
-                if (!mounted) return;
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('✅ Comment added successfully')),
-                  );
-                }
+                // ✅ Update locally to show instantly
+                setState(() {
+                  final index = requests.indexWhere(
+                      (r) => r['id'].toString() == requestId);
+                  if (index != -1) {
+                    requests[index]['comments'] ??= [];
+                    requests[index]['comments'].add({
+                      'author': author,
+                      'message': message,
+                    });
+                  }
+                });
+
+                if (mounted) Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('✅ Comment added successfully')),
+                );
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -114,15 +119,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
-  }
-
-  // ✅ Simple local "getRequestById" helper
-  Map<String, dynamic>? getRequestById(String id) {
-    try {
-      return requests.firstWhere((req) => req['id'] == id);
-    } catch (_) {
-      return null;
-    }
   }
 
   @override
@@ -148,31 +144,95 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
                     final request = requests[index];
+                    final comments = request['comments'] ?? [];
+
                     return Card(
                       margin: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                          horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 3,
-                      child: ListTile(
-                        title: Text(request['title'] ?? 'No title'),
-                        subtitle: Text(request['description'] ?? ''),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.comment, color: Colors.teal),
-                          onPressed: () =>
-                              addCommentDialog(request['id'].toString()),
-                        ),
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => RequestDetailScreen(
-                                request: request,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 🔹 Request title + description
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                request['title'] ?? 'No title',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
                               ),
+                              subtitle: Text(request['description'] ?? ''),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.comment,
+                                    color: Colors.teal),
+                                onPressed: () => addCommentDialog(
+                                    request['id'].toString()),
+                              ),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        RequestDetailScreen(request: request),
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
+
+                            // 🔹 Comments Section
+                            if (comments.isNotEmpty) ...[
+                              const Divider(),
+                              const Text(
+                                "Comments:",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.teal),
+                              ),
+                              const SizedBox(height: 6),
+                              ...comments.map((c) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 4.0),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.person,
+                                            color: Colors.teal, size: 18),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                c['author'] ?? 'Anonymous',
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.bold),
+                                              ),
+                                              Text(c['message'] ?? ''),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
+                            ] else
+                              const Padding(
+                                padding: EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  "No comments yet.",
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
                     );
                   },
