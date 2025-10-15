@@ -6,12 +6,12 @@ import json, uuid, os
 # ---------------------------
 # ✅ Initialize FastAPI App
 # ---------------------------
-app = FastAPI(title="Nearby Helper API", version="1.2")
+app = FastAPI(title="Nearby Helper API", version="1.3")
 
-# ✅ Enable CORS (for Flutter frontend)
+# ✅ Enable CORS for Flutter frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can later restrict to specific domain
+    allow_origins=["*"],  # You can restrict later to a specific frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,6 +23,7 @@ app.add_middleware(
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 DATA_FILE = os.path.join(DATA_DIR, "requests.json")
+
 
 # ---------------------------
 # ✅ Helper Functions
@@ -43,13 +44,16 @@ def save_data(data):
 
 
 # ---------------------------
-# ✅ API Routes
+# ✅ Root Route
 # ---------------------------
 @app.get("/")
 def root():
     return {"message": "Nearby Helper API running successfully 🚀"}
 
 
+# ---------------------------
+# ✅ CRUD Routes
+# ---------------------------
 @app.get("/requests")
 def get_requests():
     """Get all help requests"""
@@ -64,20 +68,14 @@ def add_request(request: HelpRequest):
     request.id = str(uuid.uuid4())
     new_request = request.dict()
 
-    if "phone_number" not in new_request:
-        new_request["phone_number"] = None
-
-    if "comments" not in new_request:
-        new_request["comments"] = []
+    # Ensure optional fields exist
+    new_request.setdefault("phone_number", None)
+    new_request.setdefault("comments", [])
 
     data.append(new_request)
     save_data(data)
 
-    return {
-        "message": "Request added successfully",
-        "id": request.id,
-        "phone_number": request.phone_number,
-    }
+    return {"message": "Request added successfully", "id": request.id}
 
 
 @app.put("/requests/{request_id}")
@@ -89,8 +87,7 @@ def update_request(request_id: str, updated: HelpRequest):
             updated_dict = updated.dict()
             updated_dict["id"] = request_id
             updated_dict["comments"] = req.get("comments", [])
-            if "phone_number" not in updated_dict:
-                updated_dict["phone_number"] = req.get("phone_number")
+            updated_dict["phone_number"] = req.get("phone_number", None)
             data[i] = updated_dict
             save_data(data)
             return {"message": "Request updated successfully"}
@@ -122,9 +119,15 @@ def add_comment(request_id: str, comment: Comment):
     for req in data:
         if req["id"] == request_id:
             comment.id = str(uuid.uuid4())
-            req.setdefault("comments", []).append(comment.dict())
+            new_comment = comment.dict()
+
+            # Ensure 'text' key exists to match Flutter payload
+            if "text" not in new_comment:
+                raise HTTPException(status_code=400, detail="Missing 'text' field in comment")
+
+            req.setdefault("comments", []).append(new_comment)
             save_data(data)
-            return {"message": "Comment added successfully", "comment": comment}
+            return {"message": "Comment added successfully", "comment": new_comment}
 
     raise HTTPException(status_code=404, detail="Request not found")
 
