@@ -32,9 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load requests: $e')),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load requests: $e')),
+        );
+      }
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
@@ -76,9 +78,11 @@ class _HomeScreenState extends State<HomeScreen> {
               final author = authorController.text.trim();
               final message = commentController.text.trim();
               if (author.isEmpty || message.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please fill all fields')),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all fields')),
+                  );
+                }
                 return;
               }
 
@@ -90,15 +94,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
 
                 if (!mounted) return;
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('✅ Comment added successfully')),
-                );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('✅ Comment added successfully')),
+                  );
+                }
               } catch (e) {
-                if (!mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('❌ Failed to add comment: $e')),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('❌ Failed to add comment: $e')),
+                  );
+                }
               }
             },
             child: const Text('Post'),
@@ -108,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // ✅ Simple local "getRequestById" helper (fix for missing method)
+  // ✅ Simple local "getRequestById" helper
   Map<String, dynamic>? getRequestById(String id) {
     try {
       return requests.firstWhere((req) => req['id'] == id);
