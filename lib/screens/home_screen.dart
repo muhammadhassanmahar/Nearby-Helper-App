@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchRequests();
   }
 
-  // ✅ Fetch all requests
+  // ✅ Fetch all requests safely
   Future<void> fetchRequests() async {
     setState(() => isLoading = true);
     try {
@@ -31,24 +31,26 @@ class _HomeScreenState extends State<HomeScreen> {
         requests = data;
       });
     } catch (e) {
-      if (mounted && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load requests: $e')),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load requests: $e')),
+      );
     } finally {
       if (mounted) setState(() => isLoading = false);
     }
   }
 
-  // ✅ Add Comment Dialog + Instant UI Update
+  // ✅ Add Comment Dialog safely (fixed context warning)
   Future<void> addCommentDialog(String requestId) async {
     final TextEditingController authorController = TextEditingController();
     final TextEditingController commentController = TextEditingController();
 
+    // Local context captured for dialog
+    final dialogContext = context;
+
     await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: dialogContext,
+      builder: (ctx) => AlertDialog(
         title: const Text('Add Comment'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -65,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -74,8 +76,8 @@ class _HomeScreenState extends State<HomeScreen> {
               final message = commentController.text.trim();
 
               if (author.isEmpty || message.isEmpty) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(content: Text('Please fill all fields')),
                   );
                 }
@@ -89,10 +91,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   message: message,
                 );
 
+                if (!mounted) return;
+
                 // ✅ Update locally to show instantly
                 setState(() {
-                  final index = requests.indexWhere(
-                      (r) => r['id'].toString() == requestId);
+                  final index = requests
+                      .indexWhere((r) => r['id'].toString() == requestId);
                   if (index != -1) {
                     requests[index]['comments'] ??= [];
                     requests[index]['comments'].add({
@@ -102,13 +106,16 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                 });
 
-                if (mounted) Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('✅ Comment added successfully')),
-                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                        content: Text('✅ Comment added successfully')),
+                  );
+                }
               } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
                     SnackBar(content: Text('❌ Failed to add comment: $e')),
                   );
                 }
@@ -238,11 +245,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
+        onPressed: () async {
+          await Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const AddRequestScreen()),
           );
+          if (!mounted) return;
+          fetchRequests(); // ✅ Refresh safely on return
         },
         label: const Text('Add Request'),
         icon: const Icon(Icons.add),
