@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'add_request_screen.dart';
-import 'requests_list_screen.dart';
 import 'request_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -40,91 +39,145 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ✅ Add Comment Dialog safely (fixed context warning)
-  Future<void> addCommentDialog(String requestId) async {
+  // ✅ Show Comments + Add Comment dialog safely
+  Future<void> showCommentsAndAddDialog(String requestId) async {
     final TextEditingController authorController = TextEditingController();
     final TextEditingController commentController = TextEditingController();
 
-    // Local context captured for dialog
-    final dialogContext = context;
+    final request = requests.firstWhere(
+      (r) => r['id'].toString() == requestId,
+      orElse: () => null,
+    );
+
+    final List<dynamic> comments = request?['comments'] ?? [];
+
+    if (!mounted) return;
 
     await showDialog(
-      context: dialogContext,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Comment'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: authorController,
-              decoration: const InputDecoration(labelText: 'Your Name'),
-            ),
-            TextField(
-              controller: commentController,
-              decoration: const InputDecoration(labelText: 'Comment'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final author = authorController.text.trim();
-              final message = commentController.text.trim();
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: const Text('Comments'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 🔹 Show existing comments
+                    if (comments.isNotEmpty)
+                      Column(
+                        children: comments.map((c) {
+                          return ListTile(
+                            leading:
+                                const Icon(Icons.person, color: Colors.teal),
+                            title: Text(
+                              c['author'] ?? 'Anonymous',
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            subtitle: Text(c['message'] ?? ''),
+                          );
+                        }).toList(),
+                      )
+                    else
+                      const Text(
+                        "No comments yet.",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    const Divider(),
+                    const SizedBox(height: 10),
 
-              if (author.isEmpty || message.isEmpty) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(content: Text('Please fill all fields')),
-                  );
-                }
-                return;
-              }
+                    // 🔹 Add new comment
+                    TextField(
+                      controller: authorController,
+                      decoration:
+                          const InputDecoration(labelText: 'Your Name'),
+                    ),
+                    TextField(
+                      controller: commentController,
+                      decoration:
+                          const InputDecoration(labelText: 'Add a comment'),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    if (Navigator.canPop(ctx)) Navigator.pop(ctx);
+                  },
+                  child: const Text('Close'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final author = authorController.text.trim();
+                    final message = commentController.text.trim();
 
-              try {
-                await ApiService.postComment(
-                  requestId: requestId,
-                  author: author,
-                  message: message,
-                );
+                    if (author.isEmpty || message.isEmpty) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                              content: Text('Please fill all fields')),
+                        );
+                      }
+                      return;
+                    }
 
-                if (!mounted) return;
+                    try {
+                      await ApiService.postComment(
+                        requestId: requestId,
+                        author: author,
+                        message: message,
+                      );
 
-                // ✅ Update locally to show instantly
-                setState(() {
-                  final index = requests
-                      .indexWhere((r) => r['id'].toString() == requestId);
-                  if (index != -1) {
-                    requests[index]['comments'] ??= [];
-                    requests[index]['comments'].add({
-                      'author': author,
-                      'message': message,
-                    });
-                  }
-                });
+                      if (!mounted) return;
 
-                if (ctx.mounted) Navigator.pop(ctx);
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    const SnackBar(
-                        content: Text('✅ Comment added successfully')),
-                  );
-                }
-              } catch (e) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(content: Text('❌ Failed to add comment: $e')),
-                  );
-                }
-              }
-            },
-            child: const Text('Post'),
-          ),
-        ],
-      ),
+                      // ✅ Update in main list
+                      setState(() {
+                        final index = requests.indexWhere(
+                            (r) => r['id'].toString() == requestId);
+                        if (index != -1) {
+                          requests[index]['comments'] ??= [];
+                          requests[index]['comments'].add({
+                            'author': author,
+                            'message': message,
+                          });
+                        }
+                      });
+
+                      if (ctx.mounted) {
+                        // ✅ Update inside dialog UI
+                        setDialogState(() {
+                          comments.add({
+                            'author': author,
+                            'message': message,
+                          });
+                          authorController.clear();
+                          commentController.clear();
+                        });
+
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          const SnackBar(
+                              content: Text('✅ Comment added successfully')),
+                        );
+                      }
+                    } catch (e) {
+                      if (ctx.mounted) {
+                        ScaffoldMessenger.of(ctx).showSnackBar(
+                          SnackBar(
+                              content: Text('❌ Failed to add comment: $e')),
+                        );
+                      }
+                    }
+                  },
+                  child: const Text('Post'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -151,7 +204,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
                     final request = requests[index];
-                    final comments = request['comments'] ?? [];
 
                     return Card(
                       margin: const EdgeInsets.symmetric(
@@ -165,7 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🔹 Request title + description
                             ListTile(
                               contentPadding: EdgeInsets.zero,
                               title: Text(
@@ -179,8 +230,9 @@ class _HomeScreenState extends State<HomeScreen> {
                               trailing: IconButton(
                                 icon: const Icon(Icons.comment,
                                     color: Colors.teal),
-                                onPressed: () => addCommentDialog(
-                                    request['id'].toString()),
+                                onPressed: () => showCommentsAndAddDialog(
+                                  request['id'].toString(),
+                                ),
                               ),
                               onTap: () {
                                 Navigator.push(
@@ -192,52 +244,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                               },
                             ),
-
-                            // 🔹 Comments Section
-                            if (comments.isNotEmpty) ...[
-                              const Divider(),
-                              const Text(
-                                "Comments:",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.teal),
-                              ),
-                              const SizedBox(height: 6),
-                              ...comments.map((c) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 4.0),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        const Icon(Icons.person,
-                                            color: Colors.teal, size: 18),
-                                        const SizedBox(width: 6),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                c['author'] ?? 'Anonymous',
-                                                style: const TextStyle(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                              ),
-                                              Text(c['message'] ?? ''),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  )),
-                            ] else
-                              const Padding(
-                                padding: EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  "No comments yet.",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ),
                           ],
                         ),
                       ),
@@ -251,33 +257,11 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (context) => const AddRequestScreen()),
           );
           if (!mounted) return;
-          fetchRequests(); // ✅ Refresh safely on return
+          fetchRequests(); // ✅ Safe refresh
         },
         label: const Text('Add Request'),
         icon: const Icon(Icons.add),
         backgroundColor: Colors.teal,
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.teal.shade100,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.home, color: Colors.teal),
-              onPressed: () {},
-            ),
-            IconButton(
-              icon: const Icon(Icons.list, color: Colors.teal),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const RequestsListScreen()),
-                );
-              },
-            ),
-          ],
-        ),
       ),
     );
   }
