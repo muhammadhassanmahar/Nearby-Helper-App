@@ -13,6 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> requests = [];
   bool isLoading = false;
+  Set<String> expandedRequests = {}; // ✅ Track which requests have comments shown
 
   @override
   void initState() {
@@ -20,7 +21,6 @@ class _HomeScreenState extends State<HomeScreen> {
     fetchRequests();
   }
 
-  // ✅ Fetch all requests safely
   Future<void> fetchRequests() async {
     setState(() => isLoading = true);
     try {
@@ -39,145 +39,96 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // ✅ Show Comments + Add Comment dialog safely
-  Future<void> showCommentsAndAddDialog(String requestId) async {
+  Future<void> addComment(String requestId, String author, String message) async {
+    try {
+      await ApiService.postComment(
+        requestId: requestId,
+        author: author,
+        message: message,
+      );
+
+      setState(() {
+        final index = requests.indexWhere((r) => r['id'].toString() == requestId);
+        if (index != -1) {
+          requests[index]['comments'] ??= [];
+          requests[index]['comments'].add({
+            'author': author,
+            'message': message,
+          });
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Comment added successfully')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Failed to add comment: $e')),
+      );
+    }
+  }
+
+  Widget buildCommentsSection(Map<String, dynamic> request) {
     final TextEditingController authorController = TextEditingController();
     final TextEditingController commentController = TextEditingController();
+    final List<dynamic> comments = request['comments'] ?? [];
 
-    final request = requests.firstWhere(
-      (r) => r['id'].toString() == requestId,
-      orElse: () => null,
-    );
-
-    final List<dynamic> comments = request?['comments'] ?? [];
-
-    if (!mounted) return;
-
-    await showDialog(
-      context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setDialogState) {
-            return AlertDialog(
-              title: const Text('Comments'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // 🔹 Show existing comments
-                    if (comments.isNotEmpty)
-                      Column(
-                        children: comments.map((c) {
-                          return ListTile(
-                            leading:
-                                const Icon(Icons.person, color: Colors.teal),
-                            title: Text(
-                              c['author'] ?? 'Anonymous',
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(c['message'] ?? ''),
-                          );
-                        }).toList(),
-                      )
-                    else
-                      const Text(
-                        "No comments yet.",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    const Divider(),
-                    const SizedBox(height: 10),
-
-                    // 🔹 Add new comment
-                    TextField(
-                      controller: authorController,
-                      decoration:
-                          const InputDecoration(labelText: 'Your Name'),
-                    ),
-                    TextField(
-                      controller: commentController,
-                      decoration:
-                          const InputDecoration(labelText: 'Add a comment'),
-                    ),
-                  ],
+    return Column(
+      children: [
+        const Divider(),
+        if (comments.isNotEmpty)
+          Column(
+            children: comments.map((c) {
+              return ListTile(
+                leading: const Icon(Icons.person, color: Colors.teal),
+                title: Text(
+                  c['author'] ?? 'Anonymous',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
+                subtitle: Text(c['message'] ?? ''),
+              );
+            }).toList(),
+          )
+        else
+          const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Text('No comments yet.', style: TextStyle(color: Colors.grey)),
+          ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+          child: Column(
+            children: [
+              TextField(
+                controller: authorController,
+                decoration: const InputDecoration(labelText: 'Your Name'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    if (Navigator.canPop(ctx)) Navigator.pop(ctx);
-                  },
-                  child: const Text('Close'),
-                ),
-                ElevatedButton(
-                  onPressed: () async {
-                    final author = authorController.text.trim();
-                    final message = commentController.text.trim();
-
-                    if (author.isEmpty || message.isEmpty) {
-                      if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                              content: Text('Please fill all fields')),
-                        );
-                      }
-                      return;
-                    }
-
-                    try {
-                      await ApiService.postComment(
-                        requestId: requestId,
-                        author: author,
-                        message: message,
-                      );
-
-                      if (!mounted) return;
-
-                      // ✅ Update in main list
-                      setState(() {
-                        final index = requests.indexWhere(
-                            (r) => r['id'].toString() == requestId);
-                        if (index != -1) {
-                          requests[index]['comments'] ??= [];
-                          requests[index]['comments'].add({
-                            'author': author,
-                            'message': message,
-                          });
-                        }
-                      });
-
-                      if (ctx.mounted) {
-                        // ✅ Update inside dialog UI
-                        setDialogState(() {
-                          comments.add({
-                            'author': author,
-                            'message': message,
-                          });
-                          authorController.clear();
-                          commentController.clear();
-                        });
-
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                              content: Text('✅ Comment added successfully')),
-                        );
-                      }
-                    } catch (e) {
-                      if (ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(
-                              content: Text('❌ Failed to add comment: $e')),
-                        );
-                      }
-                    }
-                  },
-                  child: const Text('Post'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+              TextField(
+                controller: commentController,
+                decoration: const InputDecoration(labelText: 'Add a comment'),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final author = authorController.text.trim();
+                  final message = commentController.text.trim();
+                  if (author.isEmpty || message.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please fill all fields')),
+                    );
+                    return;
+                  }
+                  addComment(request['id'].toString(), author, message);
+                  authorController.clear();
+                  commentController.clear();
+                },
+                icon: const Icon(Icons.send),
+                label: const Text('Post Comment'),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.teal),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -190,10 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: fetchRequests,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: fetchRequests),
         ],
       ),
       body: isLoading
@@ -204,13 +152,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
                     final request = requests[index];
+                    final requestId = request['id'].toString();
+                    final isExpanded = expandedRequests.contains(requestId);
 
                     return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       elevation: 3,
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
@@ -227,23 +174,38 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
                               subtitle: Text(request['description'] ?? ''),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.comment,
-                                    color: Colors.teal),
-                                onPressed: () => showCommentsAndAddDialog(
-                                  request['id'].toString(),
-                                ),
-                              ),
                               onTap: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) =>
-                                        RequestDetailScreen(request: request),
+                                    builder: (context) => RequestDetailScreen(request: request),
                                   ),
                                 );
                               },
                             ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    if (isExpanded) {
+                                      expandedRequests.remove(requestId);
+                                    } else {
+                                      expandedRequests.add(requestId);
+                                    }
+                                  });
+                                },
+                                icon: Icon(
+                                  isExpanded ? Icons.expand_less : Icons.comment,
+                                  color: Colors.teal,
+                                ),
+                                label: Text(
+                                  isExpanded ? 'Hide Comments' : 'View Comments',
+                                  style: const TextStyle(color: Colors.teal),
+                                ),
+                              ),
+                            ),
+                            if (isExpanded) buildCommentsSection(request),
                           ],
                         ),
                       ),
@@ -257,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
             MaterialPageRoute(builder: (context) => const AddRequestScreen()),
           );
           if (!mounted) return;
-          fetchRequests(); // ✅ Safe refresh
+          fetchRequests();
         },
         label: const Text('Add Request'),
         icon: const Icon(Icons.add),
