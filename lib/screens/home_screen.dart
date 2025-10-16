@@ -25,12 +25,12 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => isLoading = true);
     try {
       final data = await ApiService.getRequests();
-      if (!mounted) return;
+      if (!mounted) return; // ✅ Safe check
       setState(() {
         requests = data;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) return; // ✅ Safe check
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load requests: $e')),
       );
@@ -47,6 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
         message: message,
       );
 
+      if (!mounted) return; // ✅ Prevent using context after async
+
       setState(() {
         final index = requests.indexWhere((r) => r['id'].toString() == requestId);
         if (index != -1) {
@@ -62,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(content: Text('✅ Comment added successfully')),
       );
     } catch (e) {
+      if (!mounted) return; // ✅ Prevent unsafe context use
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ Failed to add comment: $e')),
       );
@@ -108,16 +111,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(height: 8),
               ElevatedButton.icon(
-                onPressed: () {
+                onPressed: () async {
                   final author = authorController.text.trim();
                   final message = commentController.text.trim();
                   if (author.isEmpty || message.isEmpty) {
+                    if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Please fill all fields')),
                     );
                     return;
                   }
-                  addComment(request['id'].toString(), author, message);
+
+                  await addComment(request['id'].toString(), author, message);
+                  if (!mounted) return;
+
                   authorController.clear();
                   commentController.clear();
                 },
