@@ -30,7 +30,7 @@ class _HomeScreenState extends State<HomeScreen> {
         requests = data;
       });
     } catch (e) {
-      if (!mounted) return; // ✅ Safe check
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load requests: $e')),
       );
@@ -47,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
         message: message,
       );
 
-      if (!mounted) return; // ✅ Prevent using context after async
+      if (!mounted) return;
 
       setState(() {
         final index = requests.indexWhere((r) => r['id'].toString() == requestId);
@@ -64,11 +64,25 @@ class _HomeScreenState extends State<HomeScreen> {
         const SnackBar(content: Text('✅ Comment added successfully')),
       );
     } catch (e) {
-      if (!mounted) return; // ✅ Prevent unsafe context use
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ Failed to add comment: $e')),
       );
     }
+  }
+
+  /// 🧍‍♂️ Generate or load avatar for user
+  Widget buildAvatar(String? avatarUrl, String? name) {
+    final displayName = (name ?? "User").split(" ").take(2).join(" ");
+    final avatarLink = avatarUrl != null && avatarUrl.isNotEmpty
+        ? avatarUrl
+        : "https://ui-avatars.com/api/?name=$displayName&background=009688&color=fff&bold=true";
+
+    return CircleAvatar(
+      radius: 25,
+      backgroundImage: NetworkImage(avatarLink),
+      backgroundColor: Colors.grey[200],
+    );
   }
 
   Widget buildCommentsSection(Map<String, dynamic> request) {
@@ -83,7 +97,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             children: comments.map((c) {
               return ListTile(
-                leading: const Icon(Icons.person, color: Colors.teal),
+                leading: buildAvatar(null, c['author'] ?? 'A'), // ✅ auto avatar for commenter
                 title: Text(
                   c['author'] ?? 'Anonymous',
                   style: const TextStyle(fontWeight: FontWeight.bold),
@@ -161,6 +175,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     final request = requests[index];
                     final requestId = request['id'].toString();
                     final isExpanded = expandedRequests.contains(requestId);
+                    final name = request['name'] ?? request['title'] ?? 'Anonymous';
+                    final avatarUrl = request['avatar'] ?? '';
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -173,6 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             ListTile(
                               contentPadding: EdgeInsets.zero,
+                              leading: buildAvatar(avatarUrl, name), // ✅ Avatar added
                               title: Text(
                                 request['title'] ?? 'No title',
                                 style: const TextStyle(
@@ -185,7 +202,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => RequestDetailScreen(request: request),
+                                    builder: (context) =>
+                                        RequestDetailScreen(request: request),
                                   ),
                                 );
                               },
