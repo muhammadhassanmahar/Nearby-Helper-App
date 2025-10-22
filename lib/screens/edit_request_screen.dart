@@ -18,7 +18,8 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
   late TextEditingController locationController;
   String status = "pending";
 
-  final String apiUrl = "http://127.0.0.1:8000/requests";
+  // ✅ Use your correct backend URL (for Android emulator use 10.0.2.2)
+  final String apiUrl = "http://10.0.2.2:8000/requests";
 
   @override
   void initState() {
@@ -34,7 +35,6 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
 
   Future<void> updateRequest() async {
     final updatedData = {
-      "id": widget.request['id'],
       "name": nameController.text.trim(),
       "title": titleController.text.trim(),
       "description": descriptionController.text.trim(),
@@ -46,26 +46,28 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
       final response = await http.put(
         Uri.parse("$apiUrl/${widget.request['id']}"),
         headers: {"Content-Type": "application/json"},
-        body: json.encode(updatedData),
+        body: jsonEncode(updatedData),
       );
 
-      if (response.statusCode == 200) {
-        if (!mounted) return;
+      if (!mounted) return;
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("✅ Request updated successfully")),
         );
         Navigator.pop(context, true);
       } else {
-        if (!mounted) return;
+        debugPrint("❌ Update failed: ${response.body}");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                "❌ Failed to update request (${response.statusCode})"),
+              "❌ Failed to update request (${response.statusCode})",
+            ),
           ),
         );
       }
     } catch (e) {
-      debugPrint("Error updating request: $e");
+      debugPrint("⚠️ Error updating request: $e");
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("⚠️ An error occurred")),
@@ -88,15 +90,9 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              _buildTextField(
-                controller: nameController,
-                label: "Your Name",
-              ),
+              _buildTextField(controller: nameController, label: "Your Name"),
               const SizedBox(height: 15),
-              _buildTextField(
-                controller: titleController,
-                label: "Request Title",
-              ),
+              _buildTextField(controller: titleController, label: "Request Title"),
               const SizedBox(height: 15),
               _buildTextField(
                 controller: descriptionController,
@@ -104,23 +100,18 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 15),
-              _buildTextField(
-                controller: locationController,
-                label: "Location",
-              ),
+              _buildTextField(controller: locationController, label: "Location"),
               const SizedBox(height: 20),
               DropdownButtonFormField<String>(
-                initialValue: status,
+                initialValue: status, // ✅ replaced deprecated 'value'
                 decoration: const InputDecoration(
                   labelText: "Status",
                   border: OutlineInputBorder(),
                 ),
                 items: const [
                   DropdownMenuItem(value: "pending", child: Text("Pending")),
-                  DropdownMenuItem(
-                      value: "in_progress", child: Text("In Progress")),
-                  DropdownMenuItem(
-                      value: "completed", child: Text("Completed")),
+                  DropdownMenuItem(value: "in_progress", child: Text("In Progress")),
+                  DropdownMenuItem(value: "completed", child: Text("Completed")),
                 ],
                 onChanged: (val) {
                   if (val != null) setState(() => status = val);
@@ -158,7 +149,8 @@ class _EditRequestScreenState extends State<EditRequestScreen> {
         labelText: label,
         border: const OutlineInputBorder(),
         filled: true,
-        fillColor: Colors.grey.withValues(alpha: 0.1), // ✅ replaced with .withValues()
+        // ✅ replaced deprecated .withOpacity() with .withValues()
+        fillColor: Colors.grey.withValues(alpha: 0.1),
       ),
       maxLines: maxLines,
     );

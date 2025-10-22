@@ -1,12 +1,27 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://127.0.0.1:8000"; // Change to your backend IP if needed
+  // 🌐 Dynamically determine base URL
+  static String get baseUrl {
+    String url;
 
-  // ---------------------------
+    if (kIsWeb) {
+      url = "http://localhost:8000"; // ✅ For web browser
+    } else if (Platform.isAndroid) {
+      url = "http://10.0.2.2:8000"; // ✅ For Android emulator
+    } else {
+      url = "http://127.0.0.1:8000"; // ✅ For Windows, macOS, iOS
+    }
+
+    // 👇 Print the chosen base URL for debugging
+    debugPrint("🌍 Using base URL: $url");
+    return url;
+  }
+
   // ✅ Get all help requests
-  // ---------------------------
   static Future<List<dynamic>> getRequests() async {
     final response = await http.get(Uri.parse('$baseUrl/requests'));
 
@@ -17,9 +32,7 @@ class ApiService {
     }
   }
 
-  // ---------------------------
   // ✅ Add a new help request
-  // ---------------------------
   static Future<void> addRequest(Map<String, dynamic> requestData) async {
     final response = await http.post(
       Uri.parse('$baseUrl/requests'),
@@ -32,9 +45,7 @@ class ApiService {
     }
   }
 
-  // ---------------------------
   // ✅ Update an existing request
-  // ---------------------------
   static Future<void> updateRequest(String id, Map<String, dynamic> updatedData) async {
     final response = await http.put(
       Uri.parse('$baseUrl/requests/$id'),
@@ -47,9 +58,7 @@ class ApiService {
     }
   }
 
-  // ---------------------------
   // ✅ Delete a request
-  // ---------------------------
   static Future<void> deleteRequest(String id) async {
     final response = await http.delete(Uri.parse('$baseUrl/requests/$id'));
 
@@ -58,9 +67,7 @@ class ApiService {
     }
   }
 
-  // ---------------------------
   // ✅ Add a comment to a request
-  // ---------------------------
   static Future<void> postComment({
     required String requestId,
     required String author,
@@ -80,9 +87,7 @@ class ApiService {
     }
   }
 
-  // ---------------------------
   // ✅ Get all comments for a specific request
-  // ---------------------------
   static Future<List<dynamic>> getComments(String requestId) async {
     final response = await http.get(Uri.parse('$baseUrl/requests/$requestId/comments'));
 
