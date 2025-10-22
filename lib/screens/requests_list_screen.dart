@@ -115,6 +115,23 @@ class _RequestsListScreenState extends State<RequestsListScreen> {
     );
   }
 
+  /// 🧍‍♂️ Build avatar widget (with image or fallback)
+  Widget _buildAvatar(String? avatarUrl) {
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      return CircleAvatar(
+        radius: 24,
+        backgroundImage: NetworkImage(avatarUrl),
+        backgroundColor: Colors.transparent,
+      );
+    } else {
+      return const CircleAvatar(
+        radius: 24,
+        backgroundColor: Colors.white24,
+        child: Icon(Icons.person, color: Colors.white),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,7 +144,7 @@ class _RequestsListScreenState extends State<RequestsListScreen> {
       ),
       body: Stack(
         children: [
-          // 🌈 Background
+          // 🌈 Gradient background
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -138,7 +155,7 @@ class _RequestsListScreenState extends State<RequestsListScreen> {
             ),
           ),
 
-          // 📋 Requests List
+          // 📋 Requests list
           FutureBuilder<List<dynamic>>(
             future: _requestsFuture,
             builder: (context, snapshot) {
@@ -173,9 +190,10 @@ class _RequestsListScreenState extends State<RequestsListScreen> {
                   itemCount: requests.length,
                   itemBuilder: (context, index) {
                     final request = requests[index];
-                    final name = request['name'] ?? 'Unknown';
+                    final name = request['name'] ?? 'Unknown User';
                     final desc = request['description'] ?? 'No description';
                     final id = request['id'] ?? '';
+                    final avatarUrl = request['avatar'] ?? ''; // 👈 avatar field from backend
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
@@ -198,12 +216,7 @@ class _RequestsListScreenState extends State<RequestsListScreen> {
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    CircleAvatar(
-                                      backgroundColor:
-                                          Colors.white.withValues(alpha: 0.3),
-                                      child: const Icon(Icons.person,
-                                          color: Colors.white),
-                                    ),
+                                    _buildAvatar(avatarUrl), // 🧍‍♂️ user avatar
                                     const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
