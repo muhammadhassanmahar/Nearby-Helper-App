@@ -13,7 +13,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> requests = [];
   bool isLoading = false;
-  Set<String> expandedRequests = {}; // ✅ Track which requests have comments shown
+  Set<String> expandedRequests = {};
 
   @override
   void initState() {
@@ -25,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => isLoading = true);
     try {
       final data = await ApiService.getRequests();
-      if (!mounted) return; // ✅ Safe check
+      if (!mounted) return;
       setState(() {
         requests = data;
       });
@@ -56,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
           requests[index]['comments'].add({
             'author': author,
             'message': message,
+            'avatar': 'assets/images/avatar.png', // 👈 Default avatar for new comments
           });
         }
       });
@@ -71,16 +72,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// 🧍‍♂️ Generate or load avatar for user
-  Widget buildAvatar(String? avatarUrl, String? name) {
-    final displayName = (name ?? "User").split(" ").take(2).join(" ");
-    final avatarLink = avatarUrl != null && avatarUrl.isNotEmpty
-        ? avatarUrl
-        : "https://ui-avatars.com/api/?name=$displayName&background=009688&color=fff&bold=true";
-
+  /// 🧍‍♂️ Local avatar image (from assets)
+  Widget buildAvatar(String? avatarPath) {
+    final String path = (avatarPath != null && avatarPath.isNotEmpty)
+        ? avatarPath
+        : 'assets/images/avatar.png'; // 👈 default image
     return CircleAvatar(
       radius: 25,
-      backgroundImage: NetworkImage(avatarLink),
+      backgroundImage: AssetImage(path),
       backgroundColor: Colors.grey[200],
     );
   }
@@ -97,7 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Column(
             children: comments.map((c) {
               return ListTile(
-                leading: buildAvatar(null, c['author'] ?? 'A'), // ✅ auto avatar for commenter
+                leading: buildAvatar(c['avatar']),
                 title: Text(
                   c['author'] ?? 'Anonymous',
                   style: const TextStyle(fontWeight: FontWeight.bold),
@@ -175,8 +174,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     final request = requests[index];
                     final requestId = request['id'].toString();
                     final isExpanded = expandedRequests.contains(requestId);
-                    final name = request['name'] ?? request['title'] ?? 'Anonymous';
-                    final avatarUrl = request['avatar'] ?? '';
+                    final avatarPath =
+                        request['avatar'] ?? 'assets/images/avatar.png'; // ✅ local image
 
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -189,7 +188,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             ListTile(
                               contentPadding: EdgeInsets.zero,
-                              leading: buildAvatar(avatarUrl, name), // ✅ Avatar added
+                              leading: buildAvatar(avatarPath), // ✅ Local avatar
                               title: Text(
                                 request['title'] ?? 'No title',
                                 style: const TextStyle(
